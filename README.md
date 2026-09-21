@@ -205,6 +205,7 @@ asentum-validator update      # after a chain upgrade (keeps key + bond)
 - Validators explorer: https://explorer.asentum.com/validators
 - Network: https://www.asentum.com/network
 - Telegram wallet: [@AsentumBot](https://t.me/AsentumBot)
+- Telegram Group: https://t.me/getcakedieyoungx
 
 ## Disclaimer
 
