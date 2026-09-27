@@ -12,9 +12,31 @@
 
 A tested, step-by-step guide to running an **Asentum testnet validator** on a cheap VPS, with fixes for the problems the official installer hits today (stuck sync, rejected bond, DNS errors).
 
-> Written from a real install on 21 Sep 2026. My validator has been signing since block 69,721.
+> Written from a real install on 21 Sep 2026 (validator active since block 69,721). Last checked against the live network on 27 Sep 2026, v0.6.71.
 >
 > 📡 Setup fixes, upgrade notes and new node guides: **[GETCAKE on Telegram](https://t.me/+1aWZWQwkBP0yNTg0)**
+
+---
+
+## ⚠️ Upgrade to v0.6.71 before block 240,000
+
+At block **240,000** (around **09:00 UTC, 28 Sep 2026**) the 4 genesis nodes stop earning and the block reward goes to community validators, still stake-weighted ([announcement](https://x.com/Asentum/status/2104170008893136903)). Update before that block:
+
+```bash
+asentum-validator update        # VPS
+```
+
+Desktop app: **Operator → Install & Restart v0.6.71**.
+
+`update` pulls the latest bundle and snapshot, wipes local blocks/state and restarts. Your `validator.key` and bond are kept. I ran it on my validator on 27 Sep: same key and bond afterwards, it caught up to the chain head in a few hours and signed again.
+
+Confirm you're on the new code (0 means the old build):
+
+```bash
+grep -c GENESIS_REWARDS_FROM /opt/asentum/chain/packages/node/dist/bin/run.js
+```
+
+Then run the [health check](#7-check-that-youre-signing).
 
 ---
 
@@ -95,7 +117,7 @@ You'll see a progress bar like this:
   [█████████████████████████████████████████░]  99%  69639 / 69659 blocks
 ```
 
-**Tip 1: use a fresh snapshot.** The team re-publishes the snapshot **every hour (~:08 UTC)**. An old snapshot can leave you 500+ blocks behind, and catching up at that rate takes **hours**. Check the snapshot's age:
+**Tip 1: use a fresh snapshot.** The team re-publishes the snapshot **about once an hour**. An old snapshot can leave you 500+ blocks behind, and catching up at that rate takes **hours**. Check the snapshot's age:
 
 ```bash
 curl -sI https://testnet.asentum.com/install/chain-snapshot-light.tar.gz | grep -i last-modified
@@ -156,14 +178,19 @@ Healthy output:
   address          ase129n6u00uatdeumumehx66x26j58thd2npnkvw9
   service          active
   network status   active
-  committee        signing
-  last voted       70481   (network finalized 70476)
-  misses in a row  1
-  wallet           15.005321 ASE
-  ✔ looks healthy
+  local height     219897   (network finalized 219901)
+  committee        dormant   (next committee entry at block 220100)
+  last voted       215918
+  misses in a row  100
+  wallet           379.221652 ASE
+  ✔ healthy, waiting for a committee slot
 ```
 
-A new bond shows as `pending` first, then `active / signing` after the next epoch (300 blocks, ~20–25 min). A few misses that keep resetting back to 0–1 are normal.
+**Only part of the validator set signs at a time.** Each epoch has a committee of 100 signers; the rest show `dormant` or `waiting_epoch_entry`, and the node submits its own epoch entry to get back in (`[epoch-entry] submitted…` in the logs). So `dormant` with a *next committee entry* block is normal, and the misses counter stays where it was until your next turn. On 27 Sep: 107 signing, 218 dormant, 93 waiting.
+
+When you're in the committee it reads `committee signing` and `✔ looks healthy`. A new bond shows as `pending` first, then `active` after the next epoch (300 blocks, ~20–25 min).
+
+Real problems the script flags: service not running, node more than 100 blocks behind, or not in the validator set.
 
 ---
 
@@ -193,7 +220,7 @@ asentum-validator update      # after a chain upgrade (keeps key + bond)
 
 ## FAQ
 
-**Does bonding more ASE give more XP?** No. Validator XP is based on blocks signed. The 500 ASE minimum is enough, and it comes free from the faucet.
+**Does bonding more ASE give more XP?** No. Validator XP is based on blocks signed. The 500 ASE minimum is enough, and it comes free from the faucet. The block reward itself (paid in test ASE) is stake-weighted, so a bigger bond earns a bigger share of that.
 
 **Peers shows 0. Is that bad?** No. Installed validators run in pull mode and talk to the bootstrap relays. What matters is `committee: signing`.
 

@@ -35,16 +35,39 @@ STATUS=$(jq -r '.status' <<<"$V")
 COMMITTEE=$(jq -r '.committeeState // "-"' <<<"$V")
 VOTED=$(jq -r '.lastVotedHeight // "-"' <<<"$V")
 MISSES=$(jq -r '.consecutiveMisses // 0' <<<"$V")
+NEXT=$(jq -r '.nextCommitteeEntryAt // empty' <<<"$V")
+LOCAL=""
+if command -v asentum-validator >/dev/null; then
+  LOCAL=$(asentum-validator status 2>/dev/null | strip | awk '/block height/ {print $3}')
+fi
 kv "network status" "$STATUS"
-kv "committee" "$COMMITTEE"
-kv "last voted" "$VOTED   ${D}(network finalized $FIN)${N}"
+[[ -n "$LOCAL" ]] && kv "local height" "$LOCAL   ${D}(network finalized $FIN)${N}"
+kv "committee" "$COMMITTEE${NEXT:+   ${D}(next committee entry at block $NEXT)${N}}"
+kv "last voted" "$VOTED"
 kv "misses in a row" "$MISSES"
 if command -v asentum-validator >/dev/null; then
   BAL=$(asentum-validator balance "$ADDR" 2>/dev/null | strip | grep -oE '[0-9.]+ ASE' | head -1)
   kv "wallet" "${BAL:-?}"
 fi
 
-if [[ "$STATUS" == "active" && "$COMMITTEE" == "signing" && "$MISSES" -lt 20 ]]; then
+BEHIND=0
+if [[ "$LOCAL" =~ ^[0-9]+$ && "$FIN" =~ ^[0-9]+$ ]]; then BEHIND=$(( FIN - LOCAL )); fi
+
+if [[ "$SERVICE" != "active" && "$SERVICE" != "n/a" ]]; then
+  printf "  ${R}✗ service is $SERVICE. Run: asentum-validator restart${N}
+
+"
+  exit 1
+elif (( BEHIND > 100 )); then
+  printf "  ${Y}… node is $BEHIND blocks behind. Let it catch up (asentum-validator logs)${N}
+
+"
+  exit 1
+elif [[ "$STATUS" == "active" && ( "$COMMITTEE" == "dormant" || "$COMMITTEE" == "waiting_epoch_entry" ) ]]; then
+  printf "  ${G}✔ healthy, waiting for a committee slot${N} ${D}(only part of the set signs each epoch; the node re-enters on its own)${N}
+
+"
+elif [[ "$STATUS" == "active" && "$COMMITTEE" == "signing" && "$MISSES" -lt 20 ]]; then
   printf "  ${G}✔ looks healthy${N}\n\n"
 elif [[ "$STATUS" == "pending" ]]; then
   printf "  ${Y}… pending: becomes active at the next epoch (~20–25 min)${N}\n\n"
