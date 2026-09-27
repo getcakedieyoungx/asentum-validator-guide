@@ -13,6 +13,8 @@
 A tested, step-by-step guide to running an **Asentum testnet validator** on a cheap VPS, with fixes for the problems the official installer hits today (stuck sync, rejected bond, DNS errors).
 
 > Written from a real install on 21 Sep 2026. My validator has been signing since block 69,721.
+>
+> 📡 Setup fixes, upgrade notes and new node guides: **[GETCAKE on Telegram](https://t.me/+1aWZWQwkBP0yNTg0)**
 
 ---
 
@@ -205,7 +207,7 @@ asentum-validator update      # after a chain upgrade (keeps key + bond)
 - Validators explorer: https://explorer.asentum.com/validators
 - Network: https://www.asentum.com/network
 - Telegram wallet: [@AsentumBot](https://t.me/AsentumBot)
-- Telegram Group: https://t.me/getcakedieyoungx
+- Updates & setup help: [GETCAKE on Telegram](https://t.me/+1aWZWQwkBP0yNTg0)
 
 ## Disclaimer
 
